@@ -1,0 +1,17 @@
+.venv/
+.vscode/
+CMakeFiles/
+pybind11/
+
+cmake_install.cmake
+CMakeCache.txt
+libvbcontrol.a
+test.py
+Makefile
+vbctrl
+
+*.so
+*.a
+*.cmake
+*.zip
+*.rar
