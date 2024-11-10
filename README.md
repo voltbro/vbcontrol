@@ -15,6 +15,11 @@ VBControl - это бибилотека на C++, реализующая осн�
  - Unscented Kalman Filter
  - Разные математические действия (clip, sign, friction compensation)
 
+## Зависимости
+ - pybind11
+ - matploplusplus
+ - Eigen3
+
 ## Установка
 ```
 cd ~
