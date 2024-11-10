@@ -6,16 +6,24 @@
 #include "PID.hpp"
 #include "FullStateController.hpp"
 #include "DLQR.hpp"
+#include "DCMotorDynamics.hpp"
+#include "PMSMDynamics.hpp"
+#include "PMSMCascadeFOC.hpp"
 
 // #include "LowPassFilter.hpp"
 
 #include "iostream"
+
+#include <matplot/matplot.h>
+
 // #include <stdlib.h>
 #include <string>
+#include <cmath>
 #include <Eigen/Dense>
-
+// #include <matplotlib-cpp/matplotlibcpp.h>
 using namespace std;
 using namespace Eigen;
+using namespace matplot;
 
 
 void create_lti(MatrixXd &A, MatrixXd &B, MatrixXd &C, double Ts)
@@ -572,13 +580,283 @@ void check_lqr()
     cout << "K:" << endl;
     std::cout << K.format(fmt) << std::endl;
 }
- 
+
+void check_dc()
+{
+    float Ts = 0.01;
+    float b=0.001;
+    float J=0.00001;
+    float K=0.04;
+    float R=29.0;
+    float L=1.28;
+
+    VectorXd x(3), x_(3);
+    VectorXd u(1);
+
+    std::vector<double> theta;
+    std::vector<double> d_theta;
+    std::vector<double> cur;
+    std::vector<double> time;
+    double cur_time = 0;
+    int cnt = 0;
+
+    DCMotorDynamics motor;
+    motor.set_timestep(Ts);
+    motor.set_physical_params(b, J, K, R, L);
+
+    x << 0.0, 0.0, 0.0;
+    u << 1.0;
+    for (int i = 0; i < 1/Ts; i++)
+    {
+        x_ = motor.nonlinear_dynamics(x, u);
+        // cout << "x: " << x_ << endl;
+        x = x_;
+
+        if (cnt % 10/Ts == 0)
+        {
+            theta.push_back(x(0));
+            d_theta.push_back(x(1));
+            cur.push_back(x(2));
+            time.push_back(cur_time);
+        }
+
+        cur_time += Ts;
+    }
+
+    cout << "Size: " << time.size() << endl;
+
+    auto h = figure(true);
+    h->name("DC Motor Nonlinear Dynamics");
+    h->size(1500, 1500);
+    h->tiledlayout(3, 1);
+    h->title("DC Motor Nonlinear Dynamics");
+    
+    // tiledlayout(3, 1);
+    auto ax1 = h->nexttile();
+    plot(ax1, time, theta)->line_width(2);
+    title(ax1, "Angle");
+    ylabel(ax1, "\theta [rad]");
+    grid(on);
+    
+    auto ax2 = h->nexttile();
+    plot(ax2, time, d_theta)->line_width(2);
+    title(ax2, "Velocity");
+    ylabel(ax2, "d_theta [rad/s]");
+    grid(on);
+
+    auto ax3 = h->nexttile();
+    plot(ax3, time, cur)->line_width(2);
+    title(ax3, "Current");
+    ylabel(ax3, "I [A]");
+    grid(on);
+
+    show();
+        
+} 
+
+void check_pmsm()
+{
+    float Ts = 0.0001;
+
+    float R = 1.0;
+    float U_max = 24;
+    float L = 0.000344;
+    float J = 1.04e-2;
+    float Kt = 0.66;
+    float Kw = 0.969;
+    float b=0.005;
+    float pole_pairs = 14;
+    float gear_ratio = 1;
+
+    float Z = 24;
+    VectorXd Tk(4);
+    VectorXd k(4);
+    VectorXd alpha(4);
+    Tk << 0.5, 0.2, 0.1, 0.03;
+    Tk = Tk / 16;
+    k << 1, 2, 3, 4;
+    alpha << 0, 0.01, 0.017, 0.017;
+    
+    VectorXd x(4), x_(4);
+    VectorXd u(2);
+
+    std::vector<double> theta;
+    std::vector<double> d_theta;
+    std::vector<double> i_d, i_q;
+    std::vector<double> time;
+    double cur_time = 0;
+    int cnt = 0;
+
+    PMSMDynamics motor;
+    motor.set_timestep(Ts);
+    motor.set_physical_params(R, U_max, L, J, Kt, Kw, b, pole_pairs, gear_ratio);
+    motor.set_cogging_torque_params(Tk, k, alpha, Z);
+
+    x << 0.0, 0.0, 0.0, 0.0;
+    u << 0.0, 11.39;
+
+    for (int i = 0; i < 0.01/Ts; i++)
+    {
+        x_ = motor.nonlinear_dynamics(x, u);
+        // cout << "x: " << x_ << endl;
+        x = x_;
+
+        if (cnt % 100/Ts == 0)
+        {
+            i_d.push_back(x(0));
+            i_q.push_back(x(1));
+            theta.push_back(x(2));
+            d_theta.push_back(x(3));
+            time.push_back(cur_time);
+        }
+
+        cur_time += Ts;
+    }
+
+    cout << "Size: " << time.size() << endl;
+
+    auto h = figure(true);
+    h->name("PMSM Motor Nonlinear Dynamics");
+    h->size(1500, 1500);
+    h->tiledlayout(4, 1);
+    h->title("PMSM Motor Nonlinear Dynamics");
+    
+    // tiledlayout(3, 1);
+    auto ax1 = h->nexttile();
+    plot(ax1, time, theta)->line_width(2);
+    // title(ax1, "Angle");
+    ylabel(ax1, "theta [rad]");
+    grid(on);
+    
+    auto ax2 = h->nexttile();
+    plot(ax2, time, d_theta)->line_width(2);
+    // title(ax2, "Velocity");
+    ylabel(ax2, "d theta [rad/s]");
+    grid(on);
+
+    auto ax3 = h->nexttile();
+    plot(ax3, time, i_d)->line_width(2);
+    // title(ax3, "i_d");
+    ylabel(ax3, "i_d [A]");
+    grid(on);
+
+    auto ax4 = h->nexttile();
+    plot(ax4, time, i_q)->line_width(2);
+    // title(ax4, "i_q");
+    ylabel(ax4, "i_q [A]");
+    grid(on);
+
+    show();
+}
+
+void check_pmsm_foc()
+{
+    double Ts = 0.00001;
+
+    double R = 1.0;
+    double U_max = 24;
+    double L = 0.000344;
+    double J = 1.04e-2;
+    double Kt = 0.66;
+    double Kw = 0.969;
+    double b=0.005;
+    double pole_pairs = 14;
+    double gear_ratio = 1;
+
+    double Z = 24;
+    VectorXd Tk(4);
+    VectorXd k(4);
+    VectorXd alpha(4);
+    Tk << 0.5, 0.2, 0.1, 0.03;
+    Tk = Tk / 16;
+    k << 1, 2, 3, 4;
+    alpha << 0, 0.01, 0.017, 0.017;
+
+    double theta_ref, w_ref, tau_ref, voltage_ref;
+
+    double kp = 8.0;
+    double kd = 0.2;
+    double kp_id = 1.88;
+    double ki_id = 0.0046;
+    double kp_iq = 4*1.88;
+    double ki_iq = 0.0046;
+    
+    VectorXd x(4);
+
+    std::vector<double> i_d, i_q;
+    std::vector<double> theta;
+    std::vector<double> d_theta;
+    std::vector<double> time;
+    double cur_time = 0;
+    int cnt = 0;
+
+    PMSMCascadeFOC foc;
+    foc.set_timestep(Ts);
+    foc.set_feedback(kp, kd, kp_id, ki_id, kp_iq, ki_iq);
+    foc.set_motor_params(R, U_max, L, J, Kt, Kw, b, pole_pairs, gear_ratio, Tk, k, alpha, Z);
+
+    theta_ref = 1.0;
+    w_ref = 0;
+    tau_ref = 0;
+    voltage_ref = 0;
+
+    for (int i = 0; i < 0.5/Ts; i++)
+    {
+        x = foc.calculate(theta_ref, w_ref, tau_ref, voltage_ref);
+
+        if (cnt % 100/Ts == 0)
+        {
+            i_d.push_back(x(0));
+            i_q.push_back(x(1));
+            theta.push_back(x(2));
+            d_theta.push_back(x(3));
+            time.push_back(cur_time);
+        }
+
+        cur_time += Ts;
+    } 
+
+    cout << "Size: " << time.size() << endl;
+
+    auto h = figure(true);
+    h->name("PMSM Motor FOC Control");
+    h->size(1500, 1500);
+    h->tiledlayout(4, 1);
+    h->title("PMSM Motor FOC Control");
+    
+    auto ax1 = h->nexttile();
+    plot(ax1, time, theta)->line_width(2);
+    // title(ax1, "Angle");
+    ylabel(ax1, "theta [rad]");
+    grid(on);
+    
+    auto ax2 = h->nexttile();
+    plot(ax2, time, d_theta)->line_width(2);
+    // title(ax2, "Velocity");
+    ylabel(ax2, "d theta [rad/s]");
+    grid(on);
+
+    auto ax3 = h->nexttile();
+    plot(ax3, time, i_d)->line_width(2);
+    // title(ax3, "i_d");
+    ylabel(ax3, "i_d [A]");
+    grid(on);
+
+    auto ax4 = h->nexttile();
+    plot(ax4, time, i_q)->line_width(2);
+    // title(ax4, "i_q");
+    ylabel(ax4, "i_q [A]");
+    grid(on);
+
+    show();
+}
+
 int main(int argc, char *argv[])
 {
     if (argc > 2)
         throw runtime_error("Too many arguments!");
     if (argc <= 1)
-        throw runtime_error("Please use agrument --test=<num> where <num> is a test number from 1 to 3.");
+        throw runtime_error("Please use agrument --test=<num> where <num> is a test number from 1 to 11.");
 
     string arg_str = argv[1];
     arg_str.erase(0, 7);
@@ -586,7 +864,7 @@ int main(int argc, char *argv[])
 
     switch(test_num) {
         case 1:
-            // linear dynamics
+            // Gyroboy linear dynamics
             cout << "Linear Dynamics checking..." << endl;
             check_lti();
             break;
@@ -596,7 +874,7 @@ int main(int argc, char *argv[])
             check_c2d();
             break;
         case 3:
-            // nonlinear dynamics
+            // Gyroboy nonlinear dynamics
             cout << "Nonlinear Dynamics checking..." << endl;
             check_nonlinear_dyn();
             break;
@@ -624,6 +902,21 @@ int main(int argc, char *argv[])
             // DLQR
             cout << "LQR Solver checking..." << endl;
             check_lqr();
+            break;
+        case 9:
+            // DC Motor Nonlinear Dynamics
+            cout << "DC Motor Nonlinear Dynamics checking..." << endl;
+            check_dc();
+            break;
+        case 10:
+            // PMSM Motor Nonlinear Dynamics
+            cout << "PMSM Motor Nonlinear Dynamics checking..." << endl;
+            check_pmsm();
+            break;
+        case 11:
+            // PMSM Motor FOC Control
+            cout << "PMSM Motor FOC Control checking..." << endl;
+            check_pmsm_foc();
             break;
         default:
             cout << "Test number must be from 1 to 8" << endl;

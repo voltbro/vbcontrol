@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 
 # specify the C++ standard
 
@@ -15,9 +15,11 @@ message(STATUS "Using flag -std=c++17")
 project(VBControl VERSION 1.0)
 
 find_package(Eigen3 REQUIRED)
+# find_package(matplotplusplus REQUIRED)
 # find_package(pybind11 REQUIRED)
 
 include_directories("include/")
+
 set(SOURCES src/main.cpp 
             src/LinearKalmanFilter.cpp 
             src/ExtendedKalmanFilter.cpp 
@@ -25,15 +27,22 @@ set(SOURCES src/main.cpp
             src/LowPassFilter.cpp 
             src/GyrobroDynamics.cpp 
             src/DCMotorDynamics.cpp
+            src/PMSMDynamics.cpp
+            src/PMSMCascadeFOC.cpp
             src/PID.cpp 
             src/FullStateController.cpp
             src/DLQR.cpp)
-# add the executable
-# add_executable(vbctrl ${SOURCES})
 
+# executable
+add_subdirectory(matplotplusplus)
+add_executable(vbctrl ${SOURCES})
+target_link_libraries(vbctrl PUBLIC matplot)
+
+# library
 add_library(vbcontrol STATIC ${SOURCES})
+target_link_libraries(vbcontrol PUBLIC matplot)
 
-# find_package(pybind11 REQUIRED)
+# python wrap
 add_subdirectory(pybind11)
 pybind11_add_module(vbcontrolpy "./src/pybingings.cpp")
-target_link_libraries(vbcontrolpy PUBLIC vbcontrol)
+target_link_libraries(vbcontrolpy PUBLIC vbcontrol matplot)

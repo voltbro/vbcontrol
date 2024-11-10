@@ -3,6 +3,7 @@
 
 PID::PID()
 {
+    ie = 0;
     inited = false;
 }
 
@@ -21,6 +22,8 @@ PID::PID(double Kp,
     this->u_min = u_min;
     this->u_max = u_max;
     this->use_antiwindup = use_antiwindup;
+
+    ie = 0;
 
     inited = true;
 }
@@ -65,10 +68,14 @@ double PID::calculate(double set_val, double cur_val)
     if (use_antiwindup)
     {
         if ((e > 0 && u >= u_max) || (e <= 0 && u <= u_min))
+        {
             ie += 0;
+            // cout << "yo" << endl;
+        }
         else    
             ie += (e*Ts);
     }
+    
     
     u = _calc(e, de, ie);
 

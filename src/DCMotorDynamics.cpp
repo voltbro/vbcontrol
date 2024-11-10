@@ -47,22 +47,38 @@ void DCMotorDynamics::ss_model(MatrixXd &A, MatrixXd &B, MatrixXd &C)
     C = this->C;
 }
 
-VectorXd DCMotorDynamics::nonlinear_dynamics(VectorXd &x, VectorXd &u)
+VectorXd DCMotorDynamics::cont_nonlinear_dynamics(const VectorXd &x, const VectorXd &u)
 {
     theta = x(0);
     d_theta = x(1);
     i = x(2);
     V = u(0);
+    
 
     didt = (V - i*R - K*d_theta)/L;
     dd_theta = (K*i - b*d_theta)/J;
 
-    i += didt * Ts;
-    d_theta += dd_theta * Ts;
-    theta += d_theta * Ts;
+    x_ << d_theta, dd_theta, didt;
 
-    x_ << theta, d_theta, i;
+    return x_;
+}
 
+VectorXd DCMotorDynamics::nonlinear_dynamics(VectorXd &x, VectorXd &u)
+{
+    // Euler Method
+    // i += didt * Ts;
+    // d_theta += dd_theta * Ts;
+    // theta += d_theta * Ts;
+    // x_ << theta, d_theta, i;
+
+    // RK4 Method
+    f1 = Ts * cont_nonlinear_dynamics(x,        u);
+    f2 = Ts * cont_nonlinear_dynamics(x + f1/2, u);
+    f3 = Ts * cont_nonlinear_dynamics(x + f2/2, u);
+    f4 = Ts * cont_nonlinear_dynamics(x + f3,   u);
+    
+    x_ = x + (f1 + 2*f2 + 2*f3 + f4)/6;
+    // cout << "x_: " << (f1)/6 << endl;
     return x_;
 }
 

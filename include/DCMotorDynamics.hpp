@@ -22,7 +22,7 @@ public:
 	DCMotorDynamics();
 	DCMotorDynamics(double Ts); // Ts - timestep [ms]
 	//functions
-	void set_physical_params(double b, // motor viscous frisction constant
+	void set_physical_params(   double b, // motor viscous frisction constant
                                 double J, // moment of inertia of the rotor
                                 double K, // motor constant
                                 double R, // electric resistance
@@ -30,6 +30,7 @@ public:
                                 );
 	void ss_model(MatrixXd &A, MatrixXd &B, MatrixXd &C) override;
 	VectorXd nonlinear_dynamics(VectorXd &x, VectorXd &u) override;
+    VectorXd cont_nonlinear_dynamics(const VectorXd &x, const VectorXd &u);
 	MatrixXd jacobian(VectorXd &x) override; 
 private:
 	// void calc_basic_params();
@@ -40,6 +41,8 @@ private:
 	MatrixXd B;
 	MatrixXd C;
     VectorXd x_;
+
+    VectorXd f1, f2, f3, f4;
 
     double b; // motor viscous frisction constant
     double J; // moment of inertia of the rotor
@@ -53,8 +56,6 @@ private:
     double d_theta;
     double dd_theta;
     double V;
-    
-
 };
 
 #endif //_LowPassFilter_hpp_

@@ -5,6 +5,8 @@ namespace py = pybind11;
 
 #include "vbmath.hpp"
 #include "DCMotorDynamics.hpp"
+#include "PMSMDynamics.hpp"
+#include "PMSMCascadeFOC.hpp"
 #include "SysModel.hpp"
 #include "ss.hpp"
 #include "PID.hpp"
@@ -79,8 +81,7 @@ PYBIND11_MODULE(vbcontrolpy, m)
         .def("set_initial_estimate", &LinearKalmanFilter::set_initial_estimate)
         .def("step", &LinearKalmanFilter::step)
         .def("get_K", &LinearKalmanFilter::get_K);
-
-    
+ 
     py::class_<UnscentedKalmanFilter>(m, "ukf")
         .def(py::init<>())
         .def(py::init<MatrixXd&, MatrixXd&, MatrixXd&, float, float, float>())
@@ -98,7 +99,6 @@ PYBIND11_MODULE(vbcontrolpy, m)
         .def("update", py::overload_cast<float>(&LowPassFilter::update))
         .def("update", py::overload_cast<float, float, float>(&LowPassFilter::update));
 
-
     auto dyn = m.def_submodule("dynamics");
     py::class_<SysModel>(dyn, "sys_model");
     py::class_<DCMotorDynamics, SysModel>(dyn, "dc_motor")
@@ -109,6 +109,24 @@ PYBIND11_MODULE(vbcontrolpy, m)
         .def("ss_model", &DCMotorDynamics::ss_model)
         .def("nonlinear_dynamics", &DCMotorDynamics::nonlinear_dynamics)
         .def("jacobian", &DCMotorDynamics::jacobian);
+
+    py::class_<PMSMDynamics, SysModel>(dyn, "pmsm")
+        .def(py::init<>())
+        .def(py::init<double>())
+        .def("set_timestep", &PMSMDynamics::set_timestep)
+        .def("set_physical_params", &PMSMDynamics::set_physical_params)
+        .def("set_cogging_torque_params", &PMSMDynamics::set_cogging_torque_params)
+        .def("ss_model", &PMSMDynamics::ss_model)
+        .def("nonlinear_dynamics", &PMSMDynamics::nonlinear_dynamics)
+        .def("jacobian", &PMSMDynamics::jacobian);
+
+    py::class_<PMSMCascadeFOC>(dyn, "pmsm_foc")
+        .def(py::init<>())
+        .def(py::init<double>())
+        .def("set_timestep", &PMSMCascadeFOC::set_timestep)
+        .def("set_feedback", &PMSMCascadeFOC::set_feedback)
+        .def("set_motor_params", &PMSMCascadeFOC::set_motor_params)
+        .def("calculate", &PMSMCascadeFOC::calculate);
 
     py::class_<GyrobroDynamics, SysModel>(dyn, "gyrobro")
         .def(py::init<>())
