@@ -1,5 +1,5 @@
-#ifndef _LQR_hpp_
-#define _LQR_hpp_
+#ifndef _DLQR_hpp_
+#define _DLQR_hpp_
 
 #include <iostream>
 #include <Eigen/Dense>
@@ -40,4 +40,4 @@ private:
     double eps;
 };
 
-#endif //_LQR_hpp_
+#endif //_DLQR_hpp_

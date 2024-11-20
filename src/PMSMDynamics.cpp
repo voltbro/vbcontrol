@@ -94,15 +94,15 @@ VectorXd PMSMDynamics::cont_nonlinear_dynamics(const VectorXd &x, const VectorXd
     u1 = u(0);
     u2 = u(1);
 
-    if (u(0) > 24)
-        u1 = 24;
-    else if (u(0) < -24)
-        u1 = -24;
+    if (u(0) > U_max)
+        u1 = U_max;
+    else if (u(0) < -U_max)
+        u1 = -U_max;
 
-    if (u(1) > 24)
-        u2 = 24;
-    else if (u(1) < -24)
-        u2 = -24;
+    if (u(1) > U_max)
+        u2 = U_max;
+    else if (u(1) < -U_max)
+        u2 = -U_max;
     
     Tcog = 0;
     for (int i = 0; i < 4; i++)

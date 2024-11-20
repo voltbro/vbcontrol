@@ -53,6 +53,10 @@ void ExtendedKalmanFilter::set_params(
 
 void ExtendedKalmanFilter::set_initial_estimate(const VectorXd &x0, const MatrixXd &P0)
 {   
+    cout << x0.rows() << endl;
+    cout << "---" << endl;
+    cout << dim_x << endl;
+
     if (x0.rows() != dim_x)
         throw runtime_error("ExtendedKalmanFilter: x0 dimensions doesn't equal to x!");
     if (P0.cols() != dim_x || P0.rows() != dim_x)
